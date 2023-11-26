@@ -19,7 +19,6 @@ CURRENT_DIR=$(pwd)
 ### ### ###
 
 
-
 create_dir(){ # $1 = path, $2 = dir_name
     echo -e "\n${CL_BLUE}[ * ]${C_STOP} Creating directory '${CL_CYAN}$2${C_STOP}'"
     $(/usr/bin/which sleep) 0.6
@@ -28,13 +27,17 @@ create_dir(){ # $1 = path, $2 = dir_name
     $(/usr/bin/which sleep) 0.25
 }
 
-#web_fuzz(){ # $1 = URL, $2 = wordlist
+enumerate_web(){ # $1 = target, $2 = port
+    date_time=$( $(/usr/bin/which date) | $(/usr/bin/which sed) "s/ /-/g" | $(/usr/bin/which cut) -d"-" -f2-4)
+    echo -e "\n${CL_BLUE}[ * ]${C_STOP} Enumerating files & directories at '${CL_CYAN}http://${1}:${2}${C_STOP}'"
+    $(/usr/bin/which gobuster) dir -q -u http://${1}:${2} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-words.txt -o ${BOX_PATH}/fuzz/ctfinit_${date_time}_${TARGET}_root.out 1>/dev/null
+    echo -e "${CL_GREEN}[ + ]${C_STOP} Results in '${CL_CYAN}${BOX_PATH}/fuzz/${C_STOP}'"
+}
 
-#}
+### TO DO ###: check if $TARGET equals IPv4 format
+# python isnumeric() output
 
-# TO DO: check if $TARGET equals IPv4 format
 # DONE: Inform & confirm with the user what dir he is in
-
 echo -e "${CL_BLUE}[ * ]${C_STOP} Current working directory: ${CL_CYAN}${CURRENT_DIR}${C_STOP}"
 echo -e "${CL_PURPLE}[ < ]${C_STOP} Confirm cwd [ y / n ]"
 read -p "y / n: " cwd_confirm
@@ -77,37 +80,52 @@ fi
 ### ### ###
 
 
-
 # DONE: perform full-port nmap scan
-echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
-nmap -p- -Pn -n -oA ${BOX_PATH}/nmap/${BOX_NAME}-all-ports ${TARGET} 1>/dev/null
-echo -e "${CL_BLUE}[ * ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
+echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
+$(/usr/bin/which nmap) -p- -Pn -n -oA ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports ${TARGET} 1>/dev/null
+echo -e "${CL_GREEN}[ + ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
 ### ### ###
 
 
-# DONE: filter out opened ports
-PORT_LIST=$(cat ${BOX_PATH}/nmap/${BOX_NAME}-all-ports.nmap | grep open | cut -d"/" -f1 | sed -z "s/\n/,/g" | perl -pe chop)
-### ### ###
-
-
-# DONE: perform fingerprinting scan
+#DONE: perform fingerprinting scan
 echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing fingerprint nmap scan"
-nmap -p ${PORT_LIST} -sC -sV -n -Pn -oA ${BOX_PATH}/nmap/${BOX_NAME}-fingerprints ${TARGET} 1>/dev/null
-echo -e "${CL_BLUE}[ * ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
+
+PORT_LIST=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep open | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
+
+$(/usr/bin/which nmap) -p ${PORT_LIST} -sC -sV -n -Pn -oA ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-fingerprints ${TARGET} 1>/dev/null
+echo -e "${CL_GREEN}[ + ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
 ### ### ###
 
 
-# TO DO: if discovered port is HTTP/HTTPS then perform web content discovery
-echo -e "\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP / HTTPS ports discovered"
-#HTTP_PORTS=$(cat lol/nmap/lol-all-ports.nmap | grep http | cut -d"/" -f1 | sed -z "s/\n/,/g" | perl -pe chop)
 
 
-# TO DO: make user to check whether index webpage is .html, .php, .py, .aspx etc.
+#DONE: if discovered port is HTTP/HTTPS then perform web content discovery
+### TO DO ###: recursive scanning ( stacking with multithreading? )
+
+echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP / HTTPS ports discovered"
+
+HTTP_PORTS=()
+HTTP_PORTS+=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep http | $(/usr/bin/which cut) -d"/" -f1 )
+
+# for the ports displaying on the screen - workaround
+HTTP_VAR=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep http | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
+
+if [ -z "$HTTP_PORTS" ]; then
+    echo -e "${CL_BLUE}[ * ]${C_STOP} No HTTP ports discovered. Finishing..."
+    exit 1
+else
+    echo -e "${CL_GREEN}[ + ]${C_STOP} HTTP / HTTPS port(s) ('${CL_CYAN}${HTTP_VAR}${C_STOP}') discovered. Performing web content discovery"
+
+    # iterate [list] & brute each port 
+    for port in ${HTTP_PORTS[@]}; do
+        enumerate_web $TARGET $port
+    done
+fi
+
+### TO DO ###: make user to check whether index webpage is .html, .php, .py, .aspx etc.
 # once done perform discovery with extensions supplied
 # default to not use extension discovery if not to be checked or omitted
 
-echo -e "${CL_GREEN}[ + ]${C_STOP} HTTP / HTTPS port discovered. Performing web content discovery"
 
-
-# TO DO: print used commands
+### TO DO ###: print used commands
 
