@@ -77,6 +77,7 @@ fi
 ### ### ###
 
 
+
 # DONE: perform full-port nmap scan
 echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
 nmap -p- -Pn -n -oA ${BOX_PATH}/nmap/${BOX_NAME}-all-ports ${TARGET} 1>/dev/null
