@@ -102,5 +102,12 @@ echo -e "\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP / HTTPS ports discovered"
 #HTTP_PORTS=$(cat lol/nmap/lol-all-ports.nmap | grep http | cut -d"/" -f1 | sed -z "s/\n/,/g" | perl -pe chop)
 
 
+# TO DO: make user to check whether index webpage is .html, .php, .py, .aspx etc.
+# once done perform discovery with extensions supplied
+# default to not use extension discovery if not to be checked or omitted
+
+echo -e "${CL_GREEN}[ + ]${C_STOP} HTTP / HTTPS port discovered. Performing web content discovery"
+
+
 # TO DO: print used commands
 
