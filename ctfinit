@@ -1,0 +1,105 @@
+#!/usr/bin/bash
+
+### COLORS ###
+#CL_YELLOW='\033[1;33m' # interrupt
+CL_RED='\033[1;31m'    # error / critical jobs
+CL_GREEN='\033[1;32m'  # success
+CL_BLUE='\033[1;34m'   # info
+CL_PURPLE='\033[1;35m' # user input
+CL_CYAN='\033[1;36m'   # data
+C_STOP='\033[0m'       # stop coloring
+### ### ###
+
+
+### ARGUMENTS & CONSTANTS ###
+BOX_NAME=$1     # used as a box directory name 
+TARGET=$2
+
+CURRENT_DIR=$(pwd)
+### ### ###
+
+
+
+create_dir(){ # $1 = path, $2 = dir_name
+    echo -e "\n${CL_BLUE}[ * ]${C_STOP} Creating directory '${CL_CYAN}$2${C_STOP}'"
+    $(/usr/bin/which sleep) 0.6
+    $(/usr/bin/which mkdir) "$1/$2"
+    echo -e "${CL_GREEN}[ + ]${C_STOP} Created directory at '$1/${CL_CYAN}$2${C_STOP}'"
+    $(/usr/bin/which sleep) 0.25
+}
+
+#web_fuzz(){ # $1 = URL, $2 = wordlist
+
+#}
+
+# TO DO: check if $TARGET equals IPv4 format
+# DONE: Inform & confirm with the user what dir he is in
+
+echo -e "${CL_BLUE}[ * ]${C_STOP} Current working directory: ${CL_CYAN}${CURRENT_DIR}${C_STOP}"
+echo -e "${CL_PURPLE}[ < ]${C_STOP} Confirm cwd [ y / n ]"
+read -p "y / n: " cwd_confirm
+
+case $cwd_confirm in
+    "y")
+        cwd_confirm=true
+        BOX_PATH="${CURRENT_DIR}/${BOX_NAME}"
+        ;;
+    "n")
+        cwd_confirm=false
+        echo -e "\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
+        exit 1
+        ;;
+    *)
+        echo -e "${CL_RED}[!]${C_STOP} Wrong choice"
+        exit 1
+        ;;
+esac
+### ### ###
+
+
+# DONE: create nmap, fuzz, network/ssh_keys, code, dump
+if [ -z $BOX_NAME ]; then
+    echo -e "\n${CL_RED}[ ! ]${C_STOP} Directory name can't be empty...\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
+    exit 1
+elif [ -d $BOX_NAME ]; then
+    echo -e "\n${CL_RED}[ ! ]${C_STOP} Directory '${CL_CYAN}${BOX_NAME}${C_STOP}' already exists...\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
+    exit 1
+else
+    echo -e "\n${CL_BLUE}[ * ]${C_STOP} Directory '${CL_CYAN}${BOX_NAME}${C_STOP}' does not exist. Creating..."
+    create_dir $CURRENT_DIR $BOX_NAME
+    create_dir $BOX_PATH "nmap"
+    create_dir $BOX_PATH "fuzz"
+    create_dir $BOX_PATH "network"
+    create_dir $BOX_PATH "network/ssh_keys"
+    create_dir $BOX_PATH "code"
+    create_dir $BOX_PATH "dump"
+fi
+### ### ###
+
+
+# DONE: perform full-port nmap scan
+echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
+nmap -p- -Pn -n -oA ${BOX_PATH}/nmap/${BOX_NAME}-all-ports ${TARGET} 1>/dev/null
+echo -e "${CL_BLUE}[ * ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
+### ### ###
+
+
+# DONE: filter out opened ports
+PORT_LIST=$(cat ${BOX_PATH}/nmap/${BOX_NAME}-all-ports.nmap | grep open | cut -d"/" -f1 | sed -z "s/\n/,/g" | perl -pe chop)
+### ### ###
+
+
+# DONE: perform fingerprinting scan
+echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing fingerprint nmap scan"
+nmap -p ${PORT_LIST} -sC -sV -n -Pn -oA ${BOX_PATH}/nmap/${BOX_NAME}-fingerprints ${TARGET} 1>/dev/null
+echo -e "${CL_BLUE}[ * ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
+### ### ###
+
+
+# TO DO: if discovered port is HTTP/HTTPS then perform web content discovery
+echo -e "\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP / HTTPS ports discovered"
+#HTTP_PORTS=$(cat lol/nmap/lol-all-ports.nmap | grep http | cut -d"/" -f1 | sed -z "s/\n/,/g" | perl -pe chop)
+
+
+# TO DO: print used commands
+
