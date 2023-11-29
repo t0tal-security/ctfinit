@@ -32,6 +32,8 @@ CURRENT_DIR=$(pwd)
 #4 functions for displaying colored text
 
 #5 add skipping tls checks in gobuster
+
+#6 random values in enumerate_web() instead of date_time
 ### ### ###
 
 
