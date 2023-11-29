@@ -19,6 +19,22 @@ CURRENT_DIR=$(pwd)
 ### ### ###
 
 
+### TO DO ###
+#1 check if $TARGET equals IPv4 format
+#1 python isnumeric() output
+
+#2 recursive web dir scanning ( stacking with multithreading? )
+
+#3 make user to check whether index webpage is .html, .php, .py, .aspx etc.
+#3 once done perform discovery with extensions supplied
+#3 default to not use extension discovery if not to be checked or omitted
+
+#4 functions for displaying colored text
+
+#5 add skipping tls checks in gobuster
+### ### ###
+
+
 create_dir(){ # $1 = path, $2 = dir_name
     echo -e "\n${CL_BLUE}[ * ]${C_STOP} Creating directory '${CL_CYAN}$2${C_STOP}'"
     $(/usr/bin/which sleep) 0.6
@@ -34,21 +50,19 @@ enumerate_web(){ # $1 = target, $2 = port
     echo -e "${CL_GREEN}[ + ]${C_STOP} Results in '${CL_CYAN}${BOX_PATH}/fuzz/${C_STOP}'"
 }
 
-### TO DO ###: check if $TARGET equals IPv4 format
-# python isnumeric() output
 
-# DONE: Inform & confirm with the user what dir he is in
+# Inform & confirm with the user what dir he is in
 echo -e "${CL_BLUE}[ * ]${C_STOP} Current working directory: ${CL_CYAN}${CURRENT_DIR}${C_STOP}"
 echo -e "${CL_PURPLE}[ < ]${C_STOP} Confirm cwd [ y / n ]"
 read -p "y / n: " cwd_confirm
 
 case $cwd_confirm in
     "y")
-        cwd_confirm=true
+        #cwd_confirm=true
         BOX_PATH="${CURRENT_DIR}/${BOX_NAME}"
         ;;
     "n")
-        cwd_confirm=false
+        #cwd_confirm=false
         echo -e "\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
         exit 1
         ;;
@@ -60,7 +74,7 @@ esac
 ### ### ###
 
 
-# DONE: create nmap, fuzz, network/ssh_keys, code, dump
+# create nmap, fuzz, network/ssh_keys, code, dump
 if [ -z $BOX_NAME ]; then
     echo -e "\n${CL_RED}[ ! ]${C_STOP} Directory name can't be empty...\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
     exit 1
@@ -80,34 +94,31 @@ fi
 ### ### ###
 
 
-# DONE: perform full-port nmap scan
+# perform full-port nmap scan
 echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
+
 $(/usr/bin/which nmap) -p- -Pn -n -oA ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports ${TARGET} 1>/dev/null
+
 echo -e "${CL_GREEN}[ + ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
 ### ### ###
 
 
-#DONE: perform fingerprinting scan
+# perform fingerprinting scan
 echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing fingerprint nmap scan"
-
-PORT_LIST=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep open | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
+PORT_LIST=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | $(/usr/bin/which grep) "open" | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
 
 $(/usr/bin/which nmap) -p ${PORT_LIST} -sC -sV -n -Pn -oA ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-fingerprints ${TARGET} 1>/dev/null
 echo -e "${CL_GREEN}[ + ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
 ### ### ###
 
 
-
-
-#DONE: if discovered port is HTTP/HTTPS then perform web content discovery
-### TO DO ###: recursive scanning ( stacking with multithreading? )
-
+# check if discovered port is HTTP/HTTPS then perform web content discovery
 echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP / HTTPS ports discovered"
 
 HTTP_PORTS=()
-HTTP_PORTS+=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep http | $(/usr/bin/which cut) -d"/" -f1 )
+HTTP_PORTS+=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | $(/usr/bin/which grep) "http" | $(/usr/bin/which cut) -d"/" -f1 )
 
-# for the ports displaying on the screen - workaround
+# variable for the ports displaying on the screen - workaround
 HTTP_VAR=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep http | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
 
 if [ -z "$HTTP_PORTS" ]; then
@@ -122,10 +133,4 @@ else
     done
 fi
 
-### TO DO ###: make user to check whether index webpage is .html, .php, .py, .aspx etc.
-# once done perform discovery with extensions supplied
-# default to not use extension discovery if not to be checked or omitted
-
-
-### TO DO ###: print used commands
 
