@@ -7,16 +7,16 @@
 
 ### COLORS ###
 #CL_YELLOW='\033[1;33m' # interrupt
-CL_RED='\033[1;31m'    # error / critical jobs
-CL_GREEN='\033[1;32m'  # success
-CL_BLUE='\033[1;34m'   # info
-CL_PURPLE='\033[1;35m' # user input
-CL_CYAN='\033[1;36m'   # data
-C_STOP='\033[0m'       # stop coloring
+CL_RED='\033[1;31m'     # error / critical jobs
+CL_GREEN='\033[1;32m'   # success
+CL_BLUE='\033[1;34m'    # info
+CL_PURPLE='\033[1;35m'  # user input
+CL_CYAN='\033[1;36m'    # data
+C_STOP='\033[0m'        # stop coloring
 
 
 ### ARGUMENTS & CONSTANTS ###
-BOX_NAME=$1     # used as a box directory name 
+BOX_NAME=$1     # used as a box directory name
 TARGET=$2
 CURRENT_DIR=$(pwd)
 
@@ -31,26 +31,18 @@ create_dir(){ # $1 = path, $2 = dir_name
 }
 
 enumerate_web(){ # $1 = target, $2 = port
-    # bruteforce web directory
-
     echo -e "\n${CL_BLUE}[ * ]${C_STOP} Enumerating files & directories at '${CL_CYAN}http://${1}:${2}${C_STOP}'"
     $(/usr/bin/which gobuster) dir -q -k -u http://${1}:${2} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-words.txt -o ${BOX_PATH}/fuzz/ctfinit_${1}_${2}_root.out 1>/dev/null
     echo -e "${CL_GREEN}[ + ]${C_STOP} Results in '${CL_CYAN}${BOX_PATH}/fuzz/${C_STOP}'"
 }
 
 nmap_full_port(){ # $1 = target
-    # perform full-port nmap scan
-
     echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Performing all-port nmap scan"
-
     $(/usr/bin/which nmap) -p- -Pn -n -oA ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports $1 1>/dev/null
-
     echo -e "${CL_GREEN}[ + ]${C_STOP} Results in: '${CL_CYAN}${BOX_PATH}/nmap${C_STOP}'"
 }
 
 nmap_fingerprint(){ # $1 = target
-    # perform fingerprinting scan on open ports
-
     echo -e "\n${CL_BLUE}[ * ]${C_STOP} Performing fingerprint nmap scan"
 
     PORT_LIST=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | $(/usr/bin/which grep) "open" | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
@@ -60,8 +52,6 @@ nmap_fingerprint(){ # $1 = target
 }
 
 check_http_ports(){ 
-    # check if discovered port is HTTP
-
     echo -e "\n\n${CL_BLUE}[ * ]${C_STOP} Checking if HTTP ports discovered"
 
     HTTP_PORTS=()
@@ -70,7 +60,7 @@ check_http_ports(){
 
 
 
-if [ -z $TARGET ]; then  # if target empty then quit
+if [ -z $TARGET ]; then
     #it actually eliminates the need for checking whether the directory exists, as it requires the target to be the 2nd arguments
     echo -e "${CL_RED}[ ! ]${C_STOP} Target can not be empty!\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
     echo -e "\n\nPsst... ./ctfinit <box_name> <target>"
@@ -78,23 +68,21 @@ if [ -z $TARGET ]; then  # if target empty then quit
 fi
 
 
-# Inform & confirm with the user what dir he is in
+
 echo -e "${CL_BLUE}[ * ]${C_STOP} Current working directory: ${CL_CYAN}${CURRENT_DIR}${C_STOP}"
 echo -e "${CL_PURPLE}[ < ]${C_STOP} Confirm cwd [ y / n ]"
 read -p "y / n: " cwd_confirm
 
-case $cwd_confirm in  # if "y" then assign $BOX_PATH with cwd. exit otherwise 
+case $cwd_confirm in
     "y")
-        #cwd_confirm=true
         BOX_PATH="${CURRENT_DIR}/${BOX_NAME}"
         ;;
     "n")
-        #cwd_confirm=false
         echo -e "\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
         exit 1
         ;;
     *)
-        echo -e "${CL_RED}[!]${C_STOP} Wrong choice"
+        echo -e "\n${CL_RED}[ ! ]${C_STOP} Wrong choice"
         exit 1
         ;;
 esac
@@ -104,18 +92,19 @@ esac
 #    echo -e "\n${CL_RED}[ ! ]${C_STOP} Directory name can't be empty...\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
 #    exit 1
 
-if [ -d $BOX_NAME ]; then  # quit if there is the same dir as supplied by the user
+if [ -d $BOX_NAME ]; then
     echo -e "\n${CL_RED}[ ! ]${C_STOP} Directory '${CL_CYAN}${BOX_NAME}${C_STOP}' already exists...\n${CL_BLUE}[ * ] ${CL_RED}Terminating${C_STOP}"
     exit 1
-else  # otherwise create ctfbox-related directories
+else
     echo -e "\n${CL_BLUE}[ * ]${C_STOP} Directory '${CL_CYAN}${BOX_NAME}${C_STOP}' does not exist. Creating..."
-    create_dir $CURRENT_DIR $BOX_NAME
+    create_dir $CURRENT_DIR $BOX_NAME # can not be $BOX_PATH as create_dir() requires 2 arguments
     create_dir $BOX_PATH "nmap"
     create_dir $BOX_PATH "fuzz"
     create_dir $BOX_PATH "network"
     create_dir $BOX_PATH "network/ssh_keys"
     create_dir $BOX_PATH "code"
     create_dir $BOX_PATH "dump"
+    create_dir $BOX_PATH "files"
 fi
 
 
@@ -124,14 +113,13 @@ nmap_fingerprint $TARGET
 check_http_ports
 
 
-if [ -z "$HTTP_PORTS" ]; then  # quit if no http ports discovered
+if [ -z "$HTTP_PORTS" ]; then
     echo -e "${CL_RED}[ - ]${C_STOP} No HTTP ports discovered. Finishing..."
     exit 1
-else  # otherwise bruteforce each web directory
+else
     HTTP_VAR=$( $(/usr/bin/which cat) ${BOX_PATH}/nmap/ctfinit_${BOX_NAME}-all-ports.nmap | grep http | $(/usr/bin/which cut) -d"/" -f1 | $(/usr/bin/which sed) -z "s/\n/,/g" | $(/usr/bin/which perl) -pe chop)
     echo -e "${CL_GREEN}[ + ]${C_STOP} HTTP port(s) ('${CL_CYAN}${HTTP_VAR}${C_STOP}') discovered. Performing web content discovery"
 
-    # iterate [list] & brute each port 
     for port in ${HTTP_PORTS[@]}; do
         enumerate_web $TARGET $port
     done
